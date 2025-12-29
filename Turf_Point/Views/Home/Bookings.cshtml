@@ -1,0 +1,116 @@
+﻿@{
+    ViewData["Title"] = "Bookings";
+    Layout = "~/Views/Shared/_UserLayout.cshtml";
+}
+
+<section class="container-fluid py-4" style="background: linear-gradient(135deg, #d4edda, #e9ecef); margin-top: -15px;">
+    <div class="container d-flex flex-column flex-md-row justify-content-between align-items-center">
+        <div class="mb-2 mb-md-0">
+            <h2 class="mb-0 fw-bold" style="color: #2f855a;">Bookings</h2>
+        </div>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0 p-2 rounded-pill shadow-sm"
+                style="background: linear-gradient(135deg, #a8e6a3, #d1d5db);">
+                <li class="breadcrumb-item">
+                    <a href="#" class="text-decoration-none fw-semibold" style="color: #1f7a3f;">
+                        <i class="bi bi-house-fill me-1"></i> Home
+                    </a>
+                </li>
+                <li class="breadcrumb-item active text-secondary fw-semibold" aria-current="page">
+                    Bookings
+                </li>
+            </ol>
+        </nav>
+    </div>
+</section>
+
+<div class="container py-5">
+    <div class="row" id="bookingCards">
+        <!-- Booking cards will be inserted dynamically -->
+    </div>
+</div>
+
+<!-- jQuery -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<script>
+    $(document).ready(function() {
+        const customerId = 2; // Change dynamically if needed
+        const apiUrl = `@Url.Content("~/api/BookingMaster/CustomerBookings/")${customerId}`;
+
+        $.ajax({
+            url: apiUrl,
+            type: 'GET',
+            contentType: 'application/json',
+            success: function(res) {
+                const container = $("#bookingCards");
+                container.empty();
+
+                if(res.status === "OK" && res.result.length > 0){
+                    res.result.forEach((booking, index) => {
+                        const timeslotsHtml = booking.slotes.map(slot => {
+                            return `<span class="badge bg-success me-1 mb-1">${slot.timeslot.timename} - ₹${slot.rate}</span>`;
+                        }).join(' ');
+
+                        const totalRate = booking.slotes.reduce((sum, slot) => sum + slot.rate, 0);
+
+                        const statusBadge = booking.bookingStatus === 'Pending'
+                            ? '<span class="badge bg-warning text-dark">Pending</span>'
+                            : booking.bookingStatus === 'Confirmed'
+                                ? '<span class="badge bg-success">Confirmed</span>'
+                                : '<span class="badge bg-danger">Cancelled</span>';
+
+                        const cardHtml = `
+                            <div class="col-12 col-sm-6 col-lg-4 mb-4">
+                                <div class="card shadow-sm border-0 h-100">
+                                    <div class="card-body">
+                                        <h5 class="card-title text-success fw-bold">Booking #${index + 1}</h5>
+                                        <p class="mb-1"><strong>Date:</strong> ${new Date(booking.bookingDate).toLocaleDateString()}</p>
+                                        <p class="mb-1"><strong>Status:</strong> ${statusBadge}</p>
+                                        <p class="mb-1"><strong>Slots:</strong> <br>${timeslotsHtml}</p>
+                                        <p class="mb-0"><strong>Total Rate:</strong> ₹${totalRate}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+
+                        container.append(cardHtml);
+                    });
+                } else {
+                    container.html('<div class="col-12 text-center text-secondary"><h5>No bookings found</h5></div>');
+                }
+            },
+            error: function(err){
+                console.error(err);
+                $("#bookingCards").html('<div class="col-12 text-center text-danger"><h5>Failed to load bookings</h5></div>');
+            }
+        });
+    });
+</script>
+
+<style>
+    /* Mobile-friendly adjustments */
+    .card-body {
+        padding: 1rem;
+    }
+
+    .badge {
+        font-size: 0.85rem;
+        padding: 0.35em 0.6em;
+    }
+
+    @@media (max-width: 576px) {
+      .card-title
+        {
+            font-size: 1rem;
+        }
+        p {
+            font-size: 0.875rem;
+        }
+        .badge {
+            font-size: 0.75rem;
+            padding: 0.25em 0.5em;
+        }
+
+    }
+</style>

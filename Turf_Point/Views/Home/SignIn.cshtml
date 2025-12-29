@@ -1,0 +1,207 @@
+﻿
+@{
+    ViewData["Title"] = "SignIn";
+    Layout = "~/Views/Shared/_UserLayout.cshtml";
+}
+
+<section class="container-fluid py-4" style="background: linear-gradient(135deg, #d4edda, #e9ecef);margin-top: -15px;">
+    <div class="container d-flex flex-column flex-md-row justify-content-between align-items-center">
+        <div class="mb-2 mb-md-0">
+            <h2 class="mb-0 fw-bold" style="color: #2f855a;">Login</h2>
+        </div>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0 p-2 rounded-pill shadow-sm"
+                style="background: linear-gradient(135deg, #a8e6a3, #d1d5db);">
+                <li class="breadcrumb-item">
+                    <a href="#" class="text-decoration-none fw-semibold" style="color: #1f7a3f;">
+                        <i class="bi bi-house-fill me-1"></i> Home
+                    </a>
+                </li>
+                <li class="breadcrumb-item active text-secondary fw-semibold" aria-current="page">
+                    Login
+                </li>
+            </ol>
+        </nav>
+    </div>
+</section>
+
+<div class="container py-5">
+    <div class="row shadow-lg rounded-4 overflow-hidden justify-content-center align-items-stretch">
+        <!-- Left Column: Full Image -->
+        <div class="col-lg-6 d-none d-lg-block p-0">
+            <div class="h-100 w-100" style="background: url('@Url.Content("~/box-cricket-setup.jpg")') center center/cover no-repeat;"></div>
+        </div>
+
+        <!-- Right Column: Login Form -->
+        <div class="col-lg-6 bg-white p-5 d-flex align-items-center justify-content-center">
+            <div class="w-100" style="max-width: 450px;">
+                <div id="errorSummary" class="alert alert-danger d-none"></div>
+                <div id="successMsg" class="alert alert-success d-none"></div>
+
+                <form id="loginForm" novalidate>
+                    <div class="mb-3">
+                        <label for="ContactNo" class="form-label fw-semibold">Contact Number <span class="text-danger">*</span></label>
+                        <input type="tel" class="form-control shadow-sm mb-3" id="ContactNo" name="ContactNo"
+                               required pattern="[0-9]{10}" placeholder="Enter 10-digit phone number">
+                    </div>
+                    <div class="mb-3">
+                        <label for="Password" class="form-label fw-semibold">Password <span class="text-danger">*</span></label>
+                        <input type="password" class="form-control shadow-sm mb-3" id="Password" name="Password"
+                               required placeholder="Enter password">
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="RememberMe" name="RememberMe">
+                            <label class="form-check-label fw-semibold" for="RememberMe">Remember Me</label>
+                        </div>
+                        <div>
+                            <a href="/ForgotPassword" class="text-decoration-none fw-semibold">Forgot Password?</a>
+                        </div>
+                    </div>
+
+                    <div class="d-grid mt-3">
+                        <button type="submit" class="btn btn-primary btn-lg fw-semibold shadow-sm">Login</button>
+                    </div>
+                </form>
+
+                <p class="text-center mt-3 text-muted">Don't have an account? <a href="@Url.Content("~/Sign-Up")" class="text-decoration-none fw-semibold">Sign Up</a></p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Cookie helper functions
+    function setCookie(name, value, days) {
+        let expires = "";
+        if (days) {
+            let date = new Date();
+            date.setTime(date.getTime() + (days*24*60*60*1000));
+            expires = "; expires=" + date.toUTCString();
+        }
+        document.cookie = name + "=" + encodeURIComponent(value) + expires + "; path=/";
+    }
+
+    function getCookie(name) {
+        let match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+        if (match) return decodeURIComponent(match[2]);
+        return null;
+    }
+
+    function deleteCookie(name) {
+        setCookie(name, "", -1);
+    }
+
+    $(document).ready(function () {
+
+        // Load saved cookies if exist
+        let savedUser = getCookie("ContactNo");
+        let savedPass = getCookie("Password");
+        if (savedUser && savedPass) {
+            $("#ContactNo").val(savedUser);
+            $("#Password").val(savedPass);
+            $("#RememberMe").prop("checked", true);
+        }
+
+        $("#loginForm").on("submit", function(e) {
+            e.preventDefault();
+
+            $("#errorSummary").addClass("d-none").html('');
+            $("#successMsg").addClass("d-none").html('');
+
+            let contactNo = $("#ContactNo").val().trim();
+            let password = $("#Password").val().trim();
+            let rememberMe = $("#RememberMe").is(":checked");
+            let errors = [];
+
+            if (!/^[0-9]{10}$/.test(contactNo)) errors.push("Contact Number must be 10 digits.");
+            if (!password) errors.push("Password is required.");
+
+            if (errors.length > 0) {
+                $("#errorSummary").html("<ul><li>" + errors.join("</li><li>") + "</li></ul>").removeClass("d-none");
+                return;
+            }
+
+            // Save or delete cookies based on checkbox
+            if (rememberMe) {
+                setCookie("ContactNo", contactNo, 30);
+                setCookie("Password", password, 30);
+            } else {
+                deleteCookie("ContactNo");
+                deleteCookie("Password");
+            }
+
+            let submitBtn = $(this).find("button[type='submit']");
+            let originalText = submitBtn.text();
+            submitBtn.prop("disabled", true).text("Please wait...");
+
+            $.ajax({
+                url: "@Url.Content("~/api/Registration/Authentication")",
+                type: "POST",
+                contentType: "application/json",
+                data: JSON.stringify({ UserName: contactNo, Password: password }),
+                success: function(res) {
+                    $("#successMsg").text("Login successful!").removeClass("d-none");
+                    console.log(res);
+                    localStorage.setItem("UserFullName", res.data.fullName);
+                    localStorage.setItem("UserId", res.data.id);
+                    window.location.href = "@Url.Content("~/Home/Index")";
+                },
+                error: function(xhr) {
+                    let serverError;
+                    try {
+                        serverError = JSON.parse(xhr.responseText);
+                        if (serverError.errors) {
+                            let list = "<ul>";
+                            serverError.errors.forEach(err => list += "<li>" + err + "</li>");
+                            list += "</ul>";
+                            $("#errorSummary").html(list).removeClass("d-none");
+                        } else {
+                            $("#errorSummary").text(serverError.message || "Something went wrong!").removeClass("d-none");
+                        }
+                    } catch {
+                        $("#errorSummary").text(xhr.responseText || "Something went wrong!").removeClass("d-none");
+                    }
+                },
+                complete: function() {
+                    submitBtn.prop("disabled", false).text(originalText);
+                }
+            });
+        });
+    });
+</script>
+
+<style>
+    .form-control:focus {
+        border-color: #0d6efd;
+        box-shadow: 0 0 10px rgba(13, 110, 253, 0.2);
+    }
+
+    .btn-primary:hover {
+        background: linear-gradient(90deg, #0d6efd, #6c63ff);
+        border-color: #6c63ff;
+    }
+
+    .breadcrumb a {
+        color: #0d6efd;
+    }
+
+    .breadcrumb a:hover {
+        text-decoration: underline;
+    }
+
+    .row.shadow-lg {
+        display: flex;
+        flex-wrap: wrap;
+    }
+
+    .row.shadow-lg > .col-lg-6 {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .row.shadow-lg > .col-lg-6.d-none.d-lg-block > div {
+        flex: 1;
+    }
+</style>

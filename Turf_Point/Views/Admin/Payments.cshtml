@@ -1,0 +1,140 @@
+﻿@{
+    ViewData["Title"] = "Payments";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+
+<div class="container-fluid">
+
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4 class="fw-bold mb-0">Payments</h4>
+    </div>
+
+    <!-- Filters (Optional) -->
+    <div class="row mb-3">
+        <div class="col-md-3">
+            <label>Customer</label>
+            <select id="customerFilter" class="form-control">
+                <option value="">All Customers</option>
+            </select>
+        </div>
+
+        <div class="col-md-3">
+            <label>From Date</label>
+            <input type="date" id="fromDate" class="form-control">
+        </div>
+
+        <div class="col-md-3">
+            <label>To Date</label>
+            <input type="date" id="toDate" class="form-control">
+        </div>
+
+        <div class="col-md-3 d-flex align-items-end">
+            <button id="btnFilter" class="btn btn-primary w-100">Apply Filters</button>
+        </div>
+    </div>
+
+    <!-- Payments Table -->
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table id="paymentsTable" class="table table-striped table-bordered align-middle">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Customer</th>
+                            <th>Contact No</th>
+                            <th>Amount (₹)</th>
+                            <th>Type</th>
+                            <th>Slots</th>
+                            <th>Booking Cost (₹)</th>
+                            <th>Payment Date</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- ================= SCRIPT ================= -->
+<script>
+    let paymentsTable;
+    let paymentsData = [];
+
+    $(document).ready(function () {
+
+        // Initialize DataTable
+        paymentsTable = $('#paymentsTable').DataTable({
+            data: [],
+            columns: [
+                { data: null, render: (data, type, row, meta) => meta.row + 1 },
+                { data: 'customer.fullName' },
+                { data: 'customer.contactNo' },
+                { data: 'amount', render: data => '₹ ' + data },
+                { data: 'paymentType' },
+                { data: 'booking.count' },
+                { data: 'booking.totalCost', render: data => '₹ ' + data },
+                {
+                    data: 'paymentDate',
+                    render: function (data) {
+                        return new Date(data).toLocaleDateString();
+                    }
+                },
+                {
+                    data: 'bookingMasterId',
+                    render: function (data) {
+                        return `<a href='@Url.Content("~/Admin/bookings/details/")${data}'><i class='fas fa-list'></i></a>`
+                    }
+                }
+            ]
+        });
+
+        // Load payments
+        loadPayments();
+
+        // Filter button
+        $('#btnFilter').click(function () {
+            applyFilters();
+        });
+    });
+
+    function loadPayments() {
+        $.ajax({
+            url: '@Url.Content("~/api/Payments")',
+            type: 'GET',
+            success: function (res) {
+                paymentsData = res.result;
+                populateCustomerDropdown(paymentsData);
+                paymentsTable.clear().rows.add(paymentsData).draw();
+            }
+        });
+    }
+
+    function populateCustomerDropdown(data) {
+        let customers = [...new Set(data.map(x => x.customer.fullName))];
+        $('#customerFilter').empty().append('<option value="">All Customers</option>');
+        customers.forEach(name => {
+            $('#customerFilter').append(`<option value="${name}">${name}</option>`);
+        });
+    }
+
+    function applyFilters() {
+        let customer = $('#customerFilter').val();
+        let fromDate = $('#fromDate').val();
+        let toDate = $('#toDate').val();
+
+        let filteredData = paymentsData.filter(x => {
+            let paymentDate = new Date(x.paymentDate);
+            let customerMatch = !customer || x.customer.fullName === customer;
+            let fromMatch = !fromDate || paymentDate >= new Date(fromDate);
+            let toMatch = !toDate || paymentDate <= new Date(toDate);
+            return customerMatch && fromMatch && toMatch;
+        });
+
+        paymentsTable.clear().rows.add(filteredData).draw();
+    }
+</script>

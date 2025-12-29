@@ -1,0 +1,151 @@
+﻿
+@{
+    ViewData["Title"] = "Todays Bookings";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+
+<div class="container-fluid">
+    <div class="card">
+        <div class="card-body">
+
+            <!-- Filters -->
+            <div class="row mb-3">
+                <div class="col-md-3">
+                    <label>Customer</label>
+                    <select id="customerFilter" class="form-control">
+                        <option value="">All Customers</option>
+                    </select>
+                </div>
+
+                <div class="col-md-3">
+                    <label>From Date</label>
+                    <input type="date" id="fromDate" class="form-control">
+                </div>
+
+                <div class="col-md-3">
+                    <label>To Date</label>
+                    <input type="date" id="toDate" class="form-control">
+                </div>
+
+                <div class="col-md-3 d-flex align-items-end">
+                    <button id="btnFilter" class="btn btn-primary w-100">
+                        Apply Filters
+                    </button>
+                </div>
+            </div>
+
+            <!-- Table -->
+            <div class="table-responsive">
+                <table id="bookingTable" class="table table-bordered table-striped">
+                    <thead>
+                        <tr>
+                            <th></th>
+                            <th>Customer</th>
+                            <th>Contact No</th>
+                            <th>Slots</th>
+                            <th>Total</th>
+                            <th>Payments</th>
+                            <th>Dues</th>
+                            <th>Booking Date</th>
+                            <th>Created At</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+    let bookingTable;
+    let bookingData = [];
+
+    $(document).ready(function () {
+
+        bookingTable = $('#bookingTable').DataTable({
+            data: [],
+            columns: [
+                {
+                    data: 'registrationId',
+                    render: function (data) {
+                        return `<a href='@Url.Content("~/Admin/bookings/details/")${data}'><i class='fas fa-list'></i></a>`
+                    }
+                },
+                { data: 'customer.fullName' },
+                { data: 'customer.contactNo' },
+                { data: 'totalSlotes' },
+                { data: 'total' },
+                { data: 'payments' },
+                {
+                    data: null,
+                    render: function (data) {
+                        let total = data.total || 0;
+                        let paid = data.payments || 0;
+                        return total - paid;
+                    }
+                },
+                {
+                    data: 'bookingDate',
+                    render: function (data) {
+                        return new Date(data).toLocaleDateString();
+                    }
+                },
+                {
+                    data: 'createdAt',
+                    render: function (data) {
+                        return new Date(data).toLocaleString();
+                    }
+                }
+            ]
+        });
+
+        loadBookings();
+
+        $('#btnFilter').click(function () {
+            applyFilters();
+        });
+    });
+
+    function loadBookings() {
+        $.ajax({
+            url: "@Url.Content("~/api/BookingMaster/todays-bookings")",
+            type: 'GET',
+            success: function (res) {
+                bookingData = res.result;
+                populateCustomerDropdown(bookingData);
+                bookingTable.clear().rows.add(bookingData).draw();
+            }
+        });
+    }
+
+    function populateCustomerDropdown(data) {
+        let customers = [...new Set(data.map(x => x.customer.fullName))];
+        $('#customerFilter').empty().append('<option value="">All Customers</option>');
+
+        customers.forEach(name => {
+            $('#customerFilter').append(`<option value="${name}">${name}</option>`);
+        });
+    }
+
+    function applyFilters() {
+        let customer = $('#customerFilter').val();
+        let fromDate = $('#fromDate').val();
+        let toDate = $('#toDate').val();
+
+        let filteredData = bookingData.filter(x => {
+
+            let bookingDate = new Date(x.bookingDate);
+
+            let customerMatch = !customer || x.customer.fullName === customer;
+
+            let fromMatch = !fromDate || bookingDate >= new Date(fromDate);
+            let toMatch = !toDate || bookingDate <= new Date(toDate);
+
+            return customerMatch && fromMatch && toMatch;
+        });
+
+        bookingTable.clear().rows.add(filteredData).draw();
+    }
+</script>

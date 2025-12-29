@@ -1,0 +1,179 @@
+﻿@{
+    ViewData["Title"] = "Index";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+
+<div class="container-fluid py-4">
+    <div class="row g-3" id="metricsRow">
+        <!-- Metric cards will be populated here dynamically -->
+    </div>
+
+    <div class="col-12 mt-4">
+        <div class="card shadow-lg border-0 bg-dark text-white">
+            <div class="card-body">
+                <h5 class="mb-3">🎮 Last 7 Days Sales</h5>
+                <canvas id="salesChart" height="100"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Gaming style card */
+    .metric-card {
+        border-radius: 15px;
+        padding: 20px;
+        color: #fff;
+        position: relative;
+        overflow: hidden;
+        transition: transform 0.3s, box-shadow 0.3s;
+        cursor: pointer;
+        min-height: 120px;
+    }
+
+        .metric-card h5 {
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        .metric-card p {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .metric-card i {
+            position: absolute;
+            font-size: 3rem;
+            opacity: 0.2;
+            top: 10px;
+            right: 15px;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+        }
+
+    /* Neon gradients */
+    .bg-neon1 {
+        background: linear-gradient(45deg, #ff416c, #ff4b2b);
+    }
+
+    .bg-neon2 {
+        background: linear-gradient(45deg, #1fa2ff, #12d8fa, #a6ffcb);
+    }
+
+    .bg-neon3 {
+        background: linear-gradient(45deg, #f7971e, #ffd200);
+    }
+
+    .bg-neon4 {
+        background: linear-gradient(45deg, #f953c6, #b91d73);
+    }
+
+    .bg-neon5 {
+        background: linear-gradient(45deg, #43e97b, #38f9d7);
+    }
+
+    .bg-neon6 {
+        background: linear-gradient(45deg, #fa709a, #fee140);
+    }
+
+    .bg-neon7 {
+        background: linear-gradient(45deg, #30cfd0, #330867);
+    }
+
+    .bg-neon8 {
+        background: linear-gradient(45deg, #ff6a00, #ee0979);
+    }
+
+    .bg-neon9 {
+        background: linear-gradient(45deg, #00c6ff, #0072ff);
+    }
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
+<script>
+    $(document).ready(function () {
+        $.ajax({
+            url: '@Url.Content("~/api/Admin/Dashboard")',
+            type: 'GET',
+            success: function (res) {
+                if(res.status === "Ok") {
+                    const data = res.results;
+
+                    const metrics = [
+                        { title: "Total Users", value: data.users, icon: "fa fa-users", bg: "bg-neon1" },
+                        { title: "Total Bookings", value: data.bookings, icon: "fa fa-book", bg: "bg-neon2" },
+                        { title: "Revenue", value: "₹ " + data.revenue, icon: "fa fa-coins", bg: "bg-neon3" },
+                        { title: "Dues", value: "₹ " + data.dues, icon: "fa fa-credit-card", bg: "bg-neon4" },
+                        { title: "Payments", value: "₹ " + data.payments, icon: "fa fa-money-bill-wave", bg: "bg-neon5" },
+                        { title: "Time Slots", value: data.timeSlotes, icon: "fa fa-clock", bg: "bg-neon6" },
+                        { title: "Today's Bookings", value: data.todaysbooking, icon: "fa fa-calendar-day", bg: "bg-neon7" },
+                        { title: "Today's Booking Slots", value: data.todaysbookingSlots, icon: "fa fa-calendar-alt", bg: "bg-neon8" },
+                        { title: "Today's Remaining Slots", value: data.todaysRemainSlots, icon: "fa fa-hourglass-half", bg: "bg-neon9" }
+                    ];
+
+                    let html = '';
+                    metrics.forEach(m => {
+                        html += `
+                            <div class="col-6 col-md-4 col-lg-3">
+                                <div class="metric-card ${m.bg}">
+                                    <h5>${m.title}</h5>
+                                    <p>${m.value}</p>
+                                    <i class="${m.icon}"></i>
+                                </div>
+                            </div>
+                        `;
+                    });
+
+                    $('#metricsRow').html(html);
+
+                    // Chart
+                    const labels = data.last7DaysSales.map(x => x.dayName + " (" + x.date + ")");
+                    const sales = data.last7DaysSales.map(x => x.totalSales);
+
+                    const ctx = document.getElementById('salesChart').getContext('2d');
+                    new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                label: 'Sales (₹)',
+                                data: sales,
+                                backgroundColor: [
+                                    '#ff416c','#1fa2ff','#f7971e','#f953c6','#43e97b','#fa709a','#30cfd0'
+                                ],
+                                borderColor: '#fff',
+                                borderWidth: 2,
+                                borderRadius: 5
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            plugins: {
+                                legend: { display: false }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true
+                                }
+                            }
+                        }
+                    });
+                } else {
+                    alert("Failed to load dashboard data");
+                }
+            },
+            error: function() {
+                alert("Server error while loading dashboard");
+            }
+        });
+    });
+</script>
+
+<!-- FontAwesome for icons -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">

@@ -1,0 +1,57 @@
+﻿@{
+    ViewData["Title"] = "Customers";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+
+<div class="container-fluid">
+    <div class="card">
+        <div class="card-body">
+
+            <div class="table-responsive">
+                <table id="customerTable" class="table table-bordered table-striped">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Full Name</th>
+                            <th>Contact No</th>
+                            <th>Email</th>
+                            <th>Created At</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function () {
+
+        $('#customerTable').DataTable({
+            ajax: {
+                url: '@Url.Content("~/api/Registration")',
+                type: 'GET',
+                dataSrc: 'data'
+            },
+            columns: [
+                { data: 'id' },
+                { data: 'fullName' },
+                { data: 'contactNo' },
+                { data: 'userName' },
+                {
+                    data: 'created_At',
+                    render: function (data) {
+                        return new Date(data).toLocaleString();
+                    }
+                }
+            ],
+            pageLength: 10,
+            lengthChange: true,
+            searching: true,
+            ordering: true
+        });
+
+    });
+</script>

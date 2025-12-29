@@ -1,0 +1,221 @@
+﻿
+@{
+    ViewData["Title"] = "Time Slots";
+    Layout = "~/Views/Shared/_UserLayout.cshtml";
+}
+
+<script>
+    const token = localStorage.getItem("token");
+</script>
+
+<section class="container-fluid py-4" style="background: linear-gradient(135deg, #d4edda, #e9ecef);margin-top: -15px;">
+    <div class="container d-flex flex-column flex-md-row justify-content-between align-items-center">
+        <div class="mb-2 mb-md-0">
+            <h2 class="mb-0 fw-bold" style="color: #2f855a;">Book Time Slots</h2>
+        </div>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0 p-2 rounded-pill shadow-sm"
+                style="background: linear-gradient(135deg, #a8e6a3, #d1d5db);">
+                <li class="breadcrumb-item">
+                    <a href="#" class="text-decoration-none fw-semibold" style="color: #1f7a3f;">
+                        <i class="bi bi-house-fill me-1"></i> Home
+                    </a>
+                </li>
+                <li class="breadcrumb-item active text-secondary fw-semibold" aria-current="page">
+                    Times Slots
+                </li>
+            </ol>
+        </nav>
+    </div>
+</section>
+
+<div class="container py-5">
+    <div class="row shadow-lg rounded-4 overflow-hidden">
+        <!-- Left: Date selector and Available Slots -->
+        <div class="col-md-7 p-4 border-end">
+            <h4>Select Date & Time Slots</h4>
+
+            <!-- Date input and button -->
+            <div class="mb-3 d-flex gap-2 align-items-center">
+                <input type="date" min="@System.DateTime.Today.Date.ToString("yyyy-MM-dd")" id="bookingDate" class="form-control" />
+                <button class="btn btn-primary" id="btnLoadSlots">Get</button>
+            </div>
+
+            <div class="row" id="slotsContainer">
+                <!-- Time slots checkboxes will render here -->
+            </div>
+        </div>
+
+        <!-- Right: Selected Slots & Total -->
+        <div class="col-md-5 p-4">
+            <h4>Selected Slots</h4>
+            <ul class="list-group mb-3" id="selectedSlots">
+                <!-- Selected slots appear here -->
+            </ul>
+            <h5>Total: <span id="totalAmount">0</span> </h5>
+            <button class="btn btn-success mt-3" id="btnBook">Book Now</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let slotsData = [];
+    let selectedSlots = [];
+
+    const userId = localStorage.getItem("userId");   // <-- required
+
+    // Load available slots
+    function loadTimeSlots(bookingDate) {
+        if (!bookingDate) {
+            Swal.fire("Error", "Please select a date", "error");
+            return;
+        }
+
+        $.ajax({
+            url: "@Url.Content("~/api/TimeSlot/BookTimeSlots")",
+            method: "POST",
+            contentType: "application/json",
+            data: JSON.stringify({ BookingDate: bookingDate }),
+            success: function (res) {
+                if (res.status === "OK") {
+                    slotsData = res.data;
+                    renderSlots();
+                    selectedSlots = [];
+                    updateSelectedSlots();
+                }
+            }
+        });
+    }
+
+    // Render slots UI
+    function renderSlots() {
+        const container = $("#slotsContainer");
+        container.empty();
+
+        if (slotsData.length === 0) {
+            container.append('<p class="text-muted">No slots available.</p>');
+            return;
+        }
+
+        slotsData.forEach(slot => {
+            container.append(`
+                <div class="col-md-6 mb-2">
+                    <div class="border p-2 rounded">
+                        <div class="form-check">
+                            <input class="form-check-input slot-checkbox"
+                                   type="checkbox"
+                                   value="${slot.id}"
+                                   data-rate="${slot.rate}"
+                                   id="slot_${slot.id}">
+                            <label class="form-check-label" for="slot_${slot.id}">
+                                ${slot.timename} - <b>₹${slot.rate}</b>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            `);
+        });
+    }
+
+    // Update selected slots
+    function updateSelectedSlots() {
+        const list = $("#selectedSlots");
+        list.empty();
+        let total = 0;
+
+        selectedSlots.forEach(id => {
+            const slot = slotsData.find(s => s.id === id);
+            if (slot) {
+                total += slot.rate;
+                list.append(`
+                    <li class="list-group-item d-flex justify-content-between">
+                        ${slot.timename} - ₹${slot.rate}
+                        <button class="btn btn-danger btn-sm remove-slot" data-id="${id}">&times;</button>
+                    </li>
+                `);
+            }
+        });
+
+        $("#totalAmount").text("₹" + total);
+    }
+
+    // Events
+    $(document).ready(function () {
+
+        $("#btnLoadSlots").click(function () {
+            loadTimeSlots($("#bookingDate").val());
+        });
+
+        $(document).on("change", ".slot-checkbox", function () {
+            const id = parseInt($(this).val());
+            if ($(this).is(":checked")) selectedSlots.push(id);
+            else selectedSlots = selectedSlots.filter(x => x !== id);
+            updateSelectedSlots();
+        });
+
+        $(document).on("click", ".remove-slot", function () {
+            const id = parseInt($(this).data("id"));
+            selectedSlots = selectedSlots.filter(x => x !== id);
+            $(`#slot_${id}`).prop("checked", false);
+            updateSelectedSlots();
+        });
+
+        $("#btnBook").click(function () {
+
+        const bookingDate = $("#bookingDate").val();
+
+            if (!bookingDate) {
+                Swal.fire("Error", "Please select a date", "error");
+                return;
+            }
+
+            if (selectedSlots.length === 0) {
+                Swal.fire("Error", "Please select a slot", "error");
+                return;
+            }
+
+            // Build array [{ TimeslotId, Rate }]
+            const bookingSlots = selectedSlots.map(id => {
+                const slot = slotsData.find(s => s.id === id);
+                return {
+                    TimeslotId: id,
+                    Rate: slot.rate
+                };
+            });
+
+            const bookingData = {
+                RegistrationId: 2,
+                BookingDate: bookingDate,
+                Slots: bookingSlots,
+                BookingStatus: "Pending"
+            };
+
+            console.log(bookingData);
+
+            $.ajax({
+                url: "@Url.Content("~/api/BookingMaster")",
+                method: "POST",
+                contentType: "application/json",
+                data: JSON.stringify(bookingData),
+                success: function (res) {
+                    if (res.status == "OK"){
+                        Swal.fire("Success", res.message, "success");
+                        selectedSlots = [];
+                        $(".slot-checkbox").prop("checked", false);
+                        loadTimeSlots($("#bookingDate").val());
+                    }
+                    else
+                    {
+                        Swal.fire("Error", res.message, "error");
+                    }
+                },
+                error(err){
+                    console.log(err);
+                }
+            });
+        });
+    });
+
+</script>
+
+

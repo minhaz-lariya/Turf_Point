@@ -1,0 +1,307 @@
+﻿
+@{
+    ViewData["Title"] = "TimeSlots";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+
+<input type="hidden" id="TimeslotId" value="0" />
+
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row mb-2">
+                        <div class="col-md-8">
+                            <button class="btn btn-success" id="btnAddNew">+ Add New Timeslot</button>
+                        </div>
+                    </div>
+                    <div class="col-md-12 table-responsive">
+                        <table class="table table-bordered" id="timeslotTable" style="width:100%">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Time Name</th>
+                                    <th>Rate</th>
+                                    <th>Type</th>
+                                    <th>Status</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal for Add/Edit Timeslot -->
+            <div class="modal fade" id="timeslotModal" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header bg-primary text-white">
+                            <h5 class="modal-title" id="modalTitle">Add Timeslot</h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <form id="timeslotForm">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-2">
+                                            <label>Start Time</label>
+                                            <span class="text-danger small" id="error_StartTime"></span>
+                                            <input type="time" id="StartTime" class="form-control" />
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-2">
+                                            <label>End Time</label>
+                                            <span class="text-danger small" id="error_EndTime"></span>
+                                            <input type="time" id="EndTime" class="form-control" />
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-2">
+                                            <label>Rate</label>
+                                            <span class="text-danger small" id="error_Rate"></span>
+                                            <input type="number" id="Rate" class="form-control" />
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-2">
+                                            <label>Type</label>
+                                            <span class="text-danger small" id="error_Type"></span>
+                                            <select id="Type" class="form-select">
+                                                <option value="">---Select Type---</option>
+                                                <option value="Morning">Morning</option>
+                                                <option value="Afternoon">Afternoon</option>
+                                                <option value="Evening">Evening</option>
+                                                <option value="Night">Night</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-12">
+                                        <div class="mb-2">
+                                            <label>Status</label>
+                                            <span class="text-danger small" id="error_Status"></span>
+                                            <select id="Status" class="form-select">
+                                                <option value="">---Select Status---</option>
+                                                <option value="show">Show</option>
+                                                <option value="hide">Hide</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="button" class="btn btn-primary" id="Save">Save</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+           
+        </div>
+    </div>
+</div>
+
+<script>
+    const token = localStorage.getItem("token");
+
+    function formatTo12Hour(timeStr) {
+        const [hourStr, minute] = timeStr.split(":");
+        let hour = parseInt(hourStr);
+        const ampm = hour >= 12 ? "PM" : "AM";
+        hour = hour % 12 || 12;
+        return `${hour.toString().padStart(2, '0')}:${minute} ${ampm}`;
+    }
+
+    function convertTo24Hour(timeStr) {
+        const [time, modifier] = timeStr.split(" ");
+        let [hours, minutes] = time.split(":").map(Number);
+        if (modifier === "PM" && hours < 12) hours += 12;
+        if (modifier === "AM" && hours === 12) hours = 0;
+        return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`;
+    }
+
+    function resetForm() {
+        $("#TimeslotId").val(0);
+        $(".text-danger").text("");
+        $("#StartTime,#EndTime,#Rate,#Type,#Status").val('');
+    }
+
+    function validateForm() {
+        let isValid = true;
+        $(".text-danger").text("");
+
+        const start = $("#StartTime").val();
+        const end = $("#EndTime").val();
+        const rate = $("#Rate").val();
+        const type = $("#Type").val();
+        const status = $("#Status").val();
+
+        if (!start) { $("#error_StartTime").text("Start Time is required"); isValid = false; }
+        if (!end) { $("#error_EndTime").text("End Time is required"); isValid = false; }
+        if (start && end && start >= end) { $("#error_EndTime").text("End Time must be greater than Start Time"); isValid = false; }
+        if (!rate || rate <= 0) { $("#error_Rate").text("Enter a valid Rate"); isValid = false; }
+        if (!type) { $("#error_Type").text("Please select a Type"); isValid = false; }
+        if (!status) { $("#error_Status").text("Please select a Status"); isValid = false; }
+
+        return isValid;
+    }
+
+    $(document).ready(function () {
+        // Initialize DataTable
+        const table = $('#timeslotTable').DataTable({
+            ajax: {
+                url: "@Url.Content("~/api/TimeSlot/List")",
+                type: "GET",
+                dataSrc: function (json) {
+                    if (json.status === "OK") {
+                        return json.data;
+                    } else {
+                        return [];
+                    }
+                }
+            },
+            columns: [
+                { data: "id" },
+                { data: "timename" },
+                { data: "rate" },
+                { data: "type" },
+                { data: "status" },
+                {
+                    data: null,
+                    orderable: false,
+                    searchable: false,
+                    className: "text-center",
+                    render: function (data, type, row) {
+                        return `
+                            <button class="btn btn-sm btn-info edit-btn" data-id="${row.id}">Edit</button>
+                            <button class="btn btn-sm btn-danger delete-btn" data-id="${row.id}">Delete</button>
+                        `;
+                    }
+                }
+            ],
+            paging: true,
+            searching: true,
+            ordering: true,
+            info: true,
+            lengthChange: true,
+            responsive: true
+        });
+
+        // Add New Timeslot button click
+        $("#btnAddNew").click(function () {
+            resetForm();
+            $("#modalTitle").text("Add Timeslot");
+            const modal = new bootstrap.Modal(document.getElementById('timeslotModal'));
+            modal.show();
+        });
+
+        // Save Timeslot (Add/Edit)
+        $("#Save").click(function () {
+            if (!validateForm()) return;
+
+            const start = $("#StartTime").val();
+            const end = $("#EndTime").val();
+            const Timename = `${formatTo12Hour(start)} to ${formatTo12Hour(end)}`;
+            const id = parseInt($("#TimeslotId").val());
+
+            const requestData = {
+                Id: id,
+                Timename: Timename,
+                Rate: $("#Rate").val(),
+                Type: $("#Type").val(),
+                Status: $("#Status").val(),
+                LastBookingTime : $("#StartTime").val()
+            };
+            const method = id === 0 ? "POST" : "PUT";
+            const url = id === 0
+                ? '@Url.Content("~/api/TimeSlot/Save")'
+                : '@Url.Content("~/api/TimeSlot/Update/")' + id;
+
+            $("#Save").html("Saving...");
+
+            $.ajax({
+                url: url,
+                method: method,
+                contentType: "application/json",
+                data: JSON.stringify(requestData),
+                success: function (res) {
+
+                    console.log(res);
+
+                    $("#Save").html("Save");
+                    const modalEl = document.getElementById('timeslotModal');
+                    const modal = bootstrap.Modal.getInstance(modalEl);
+                    modal.hide();
+
+                    Swal.fire("Success", res.message || "Saved successfully", "success");
+                    resetForm();
+                    table.ajax.reload(null, false); // reload without resetting pagination
+                },
+                error: function (err) {
+                    console.log(err);
+                    $("#Save").html("Save");
+                    Swal.fire("Error", err.responseJSON?.message || "Failed to save", "error");
+                }
+            });
+        });
+
+        // Edit button in table
+        $('#timeslotTable tbody').on('click', '.edit-btn', function () {
+            const id = $(this).data("id");
+            $.ajax({
+                url: "@Url.Content("~/api/TimeSlot/Details/")" + id,
+                method: 'GET',
+                success: function (res) {
+                    const slot = res.data;
+                    $("#TimeslotId").val(slot.id);
+                    $("#Rate").val(slot.rate);
+                    $("#Type").val(slot.type);
+                    $("#Status").val(slot.status);
+
+                    // Split timename "HH:MM AM/PM to HH:MM AM/PM"
+                    const times = slot.timename.split(" to ");
+                    if (times.length === 2) {
+                        $("#StartTime").val(convertTo24Hour(times[0]));
+                        $("#EndTime").val(convertTo24Hour(times[1]));
+                    }
+                    $("#modalTitle").text("Edit Timeslot");
+                    const modal = new bootstrap.Modal(document.getElementById('timeslotModal'));
+                    modal.show();
+                }
+            });
+        });
+
+        // Delete button in table
+        $('#timeslotTable tbody').on('click', '.delete-btn', function () {
+            const id = $(this).data("id");
+            Swal.fire({
+                title: "Are you sure?",
+                text: "This will permanently delete the timeslot.",
+                icon: "warning",
+                showCancelButton: true,
+                confirmButtonColor: "#d33",
+                confirmButtonText: "Yes, delete it!"
+            }).then(result => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: "@Url.Content("~/api/TimeSlot/Remove/")" + id,
+                        method: 'DELETE',
+                        success: function (res) {
+                            Swal.fire("Deleted!", res.message || "Deleted successfully", "success");
+                            table.ajax.reload(null, false);
+                        },
+                        error: function (err) {
+                            Swal.fire("Error", err.responseJSON?.message || "Failed to delete", "error");
+                        }
+                    });
+                }
+            });
+        });
+    });
+</script>

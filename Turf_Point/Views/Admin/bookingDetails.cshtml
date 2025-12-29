@@ -1,0 +1,318 @@
+﻿@{
+    ViewData["Title"] = "Booking Details";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+
+<div class="container-fluid">
+
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4 class="fw-bold mb-0"></h4>
+        <div>
+            <button class="btn btn-sm btn-success me-2" data-bs-toggle="modal" data-bs-target="#paymentModal">
+                <i class="fas fa-money-bill-wave me-1"></i> Add Payment
+            </button>
+            <a href="javascript:history.back()" class="btn btn-sm btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i> Back
+            </a>
+        </div>
+    </div>
+
+    <!-- Summary Section -->
+    <div class="row mb-4">
+
+        <div class="col-md-4 d-flex">
+            <div class="card shadow-sm border-0 h-100 w-100">
+                <div class="card-body d-flex flex-column">
+                    <small class="text-muted">Customer</small>
+                    <h6 class="fw-bold mb-1 mt-2" id="customerName"></h6>
+                    <span class="text-secondary mt-auto" id="contactNo"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 d-flex">
+            <div class="card shadow-sm border-0 h-100 w-100">
+                <div class="card-body d-flex flex-column">
+                    <small class="text-muted">Booking Information</small>
+                    <div class="mt-2">
+                        <div><strong>Date:</strong> <span id="bookingDate"></span></div>
+                        <small class="text-secondary">
+                            Created: <span id="createdAt"></span>
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 d-flex">
+            <div class="card shadow-sm border-0 h-100 w-100 text-center">
+                <div class="card-body d-flex flex-column justify-content-center">
+                    <small class="text-muted">Total Amount</small>
+                    <h3 class="fw-bold text-success my-2">
+                        ₹ <span id="totalAmount"></span>
+                    </h3>
+                    <small class="text-secondary">
+                        Slots Booked: <strong><span id="totalSlots"></span></strong>
+                    </small>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Slot Details -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-light fw-semibold d-flex justify-content-between align-items-center">
+            <span>Slot Details</span>
+            <button type="button" id="btnCancelSlots" class="btn btn-sm btn-danger me-2">
+                <i class="fas fa-times"></i>&nbsp;Cancel Slots
+            </button>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover table-bordered mb-0 align-middle">
+                    <thead class="table-dark">
+                        <tr>
+
+                            <th class="text-center" style="width:60px;">#</th>
+                            <th>Slot Time</th>
+                            <th class="text-end" style="width:120px;">Rate (₹)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="slotTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payment List -->
+    <div class="card shadow-sm">
+        <div class="card-header bg-light fw-semibold">Payments</div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-striped table-bordered mb-0 align-middle" id="paymentTable">
+                    <thead class="table-dark">
+                        <tr>
+                            <th class="text-center" style="width:60px;">#</th>
+                            <th>Amount (₹)</th>
+                            <th>Payment Type</th>
+                            <th>Reference</th>
+                            <th>Payment Date</th>
+                            <th>Created At</th>
+                        </tr>
+                    </thead>
+                    <tbody id="paymentTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- ===================== ADD PAYMENT MODAL ===================== -->
+<div class="modal fade" id="paymentModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title">Add Payment</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+
+                <input type="hidden" id="bookingId" value="@ViewBag.bookingId" />
+
+                <div class="mb-2">
+                    <label class="form-label fw-semibold">Amount</label>
+                    <input type="number" id="paymentAmount" class="form-control" placeholder="Enter amount">
+                </div>
+
+                <div class="mb-2">
+                    <label class="form-label fw-semibold">Payment Type</label>
+                    <select id="paymenttype" class="form-control">
+                        <option value="Cash">Cash</option>
+                        <option value="Card">Card</option>
+                        <option value="Online">Online</option>
+                    </select>
+                </div>
+
+                <div class="mb-2">
+                    <label class="form-label fw-semibold">Reference No.</label>
+                    <input type="text" id="referenceNo" class="form-control" placeholder="Transaction / Ref No">
+                </div>
+
+                <div class="mb-2">
+                    <label class="form-label fw-semibold">Payment Date</label>
+                    <input type="date" id="paymentDate" class="form-control">
+                </div>
+
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-success" id="btnSavePayment">
+                    <i class="fas fa-save me-1"></i> Save Payment
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- ===================== SCRIPT ===================== -->
+<script>
+    $(document).ready(function () {
+
+        $(document).on('click', '#btnCancelSlots', function () {
+
+            let removeSlotes = [];
+
+            $('.slot-checkbox:checked').each(function () {
+                removeSlotes.push(parseInt($(this).val()));
+            });
+
+            if (removeSlotes.length === 0) {
+                alert('Please select at least one slot');
+                return;
+            }
+
+            if (!confirm('Are you sure you want to cancel selected slots?')) {
+                return;
+            }
+
+            $.ajax({
+                url: '@Url.Content("~/api/BookingMaster/RemoveSlotes")',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(removeSlotes),
+                success: function (res) {
+
+                    if (res.status === "OK") {
+                        alert(res.message);
+                        $('.slot-checkbox:checked').closest('tr').remove();
+                        window.location.href = "";
+                    } else {
+                        alert('Failed to remove slots');
+                    }
+                },
+                error: function (err) {
+                    console.error(err);
+                    alert('Something went wrong while removing slots');
+                }
+            });
+        });
+
+        let bookingId = "@ViewBag.bookingId";
+
+        // Load booking details
+        $.ajax({
+            url: `@Url.Content("~/api/BookingMaster/bookings/details/")${bookingId}`,
+            type: 'GET',
+            success: function (res) {
+                let data = res.result;
+
+                $('#customerName').text(data.customer.fullName);
+                $('#contactNo').text(data.customer.contactNo);
+                $('#bookingDate').text(new Date(data.bookingDate).toLocaleDateString());
+                $('#createdAt').text(new Date(data.createdAt).toLocaleString());
+                $('#totalSlots').text(data.totalSlotes);
+                $('#totalAmount').text(data.total);
+
+                $('#slotTableBody').empty();
+                data.slotes.forEach((item, index) => {
+                    $('#slotTableBody').append(`
+                        <tr>
+                            <td class="text-center">
+                                <input type="checkbox" class="slot-checkbox" value="${item.id}">
+                            </td>
+                            <td>${item.slote}</td>
+                            <td class="text-end fw-semibold">₹ ${item.rate}</td>
+                        </tr>
+                    `);
+                });
+            }
+        });
+
+        // Load payment list
+        function loadPayments() {
+            $.ajax({
+                url: `@Url.Content("~/api/Payments/paymentList/")${bookingId}`,
+                type: 'GET',
+                success: function (res) {
+                    let payments = res.result;
+                    $('#paymentTableBody').empty();
+                    payments.forEach((p, index) => {
+                        $('#paymentTableBody').append(`
+                            <tr>
+                                <td class="text-center">${index + 1}</td>
+                                <td class="fw-semibold">₹ ${p.amount}</td>
+                                <td>${p.paymentType}</td>
+                                <td>${p.remark}</td>
+                                <td>${new Date(p.paymentDate).toLocaleDateString()}</td>
+                                <td>${new Date(p.created_At).toLocaleString()}</td>
+                            </tr>
+                        `);
+                    });
+                }
+            });
+        }
+
+        loadPayments();
+
+        // Save payment
+        $('#btnSavePayment').click(function () {
+
+            let paymentData = {
+                BookingMasterId: $('#bookingId').val(),
+                Amount: $('#paymentAmount').val(),
+                Remark: $('#referenceNo').val(),
+                PaymentType: $('#paymenttype').val(),
+                PaymentDate: $('#paymentDate').val()
+            };
+
+            if (!paymentData.Amount || !paymentData.Remark || !paymentData.PaymentDate) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Incomplete Data',
+                    text: 'Please fill all payment details',
+                    confirmButtonColor: '#3085d6'
+                });
+                return;
+            }
+
+            $.ajax({
+                url: '@Url.Content("~/api/Payments/Save")',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(paymentData),
+                success: function () {
+                    $('#paymentModal').modal('hide');
+                    $('#paymentAmount').val('');
+                    $('#referenceNo').val('');
+                    $('#paymentDate').val('');
+
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Payment Added',
+                        text: 'The payment has been saved successfully!',
+                        confirmButtonColor: '#3085d6'
+                    });
+
+                    // Refresh payment list
+                    loadPayments();
+                },
+                error: function () {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'There was an error while saving payment.',
+                        confirmButtonColor: '#d33'
+                    });
+                }
+            });
+        });
+
+    });
+</script>
