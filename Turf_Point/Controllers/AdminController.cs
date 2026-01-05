@@ -59,5 +59,23 @@ namespace Turf_Point.Controllers
         {
             return View();
         }
+
+        [HttpGet("Admin/Todays/Available-Slots")]
+        public IActionResult todaysAvailableSlotes()
+        {
+            return View();
+        }
+
+        [HttpGet("Admin/Available-Slots")]
+        public IActionResult availableSlotes()
+        {
+            return View();
+        }
+
+        [HttpGet("Admin/Change-Password")]
+        public IActionResult changePassword()
+        {
+            return View();
+        }
     }
 }

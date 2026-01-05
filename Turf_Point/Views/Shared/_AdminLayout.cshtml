@@ -300,7 +300,7 @@
 
         <!-- Scrollable Navigation -->
         <div class="sidebar-nav">
-            <a href="#dashboard" onclick="autoCloseSidebar()">
+            <a href="@Url.Content("~/Admin/Dashboard")" onclick="autoCloseSidebar()">
                 <i class="bi bi-house-door me-2"></i>Dashboard
             </a>
 
@@ -308,9 +308,18 @@
                 <i class="bi bi-people me-2"></i>Users
             </a>
 
-            <a href="@Url.Content("~/Admin/Time-Slots")" onclick="autoCloseSidebar()">
-                <i class="bi bi-people me-2"></i>Time Slotes
-            </a>
+            <div class="sidebar-dropdown">
+                <a href="#" class="sidebar-dropdown-toggle" onclick="toggleSidebarDropdown(event, 'time-slotes')">
+                    <i class="bi bi-calendar-check me-2"></i>Time Slotes
+                    <span class="dropdown-arrow">▾</span>
+                </a>
+                <div class="sidebar-dropdown-content" id="time-slotes">
+                    <a href="@Url.Content("~/Admin/Time-Slots")" onclick="autoCloseSidebar()">New Slote</a>
+                    <a href="@Url.Content("~/Admin/Todays/Available-Slots")" onclick="autoCloseSidebar()">Today's Available</a>
+                    <a href="@Url.Content("~/Admin/Available-Slots")">Available Slotes</a>
+                </div>
+            </div>
+
 
             <!-- Bookings Dropdown -->
             <div class="sidebar-dropdown">
@@ -396,7 +405,7 @@
 
             <ul class="dropdown-menu dropdown-menu-end shadow border-0 mt-2" aria-labelledby="accountDropdown">
                 <li><a class="dropdown-item px-3 py-2" href="#"><i class="bi bi-person me-2"></i>Profile</a></li>
-                <li><a class="dropdown-item px-3 py-2" href="#"><i class="bi bi-key me-2"></i>Change Password</a></li>
+                <li><a class="dropdown-item px-3 py-2" href="@Url.Content("~/Admin/Change-Password")"><i class="bi bi-key me-2"></i>Change Password</a></li>
                 <li>
                     <hr class="dropdown-divider my-0">
                 </li>

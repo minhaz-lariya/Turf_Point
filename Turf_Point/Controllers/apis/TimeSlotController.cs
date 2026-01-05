@@ -184,5 +184,44 @@ namespace Turf_Point.Controllers.apis
                 return StatusCode(500, new { Status = "Error", Message = ex.Message });
             }
         }
+
+
+        [HttpGet("AvailableSlotes/Todays")]
+        public async Task<IActionResult> todaysAvailableSlotes()
+        {
+            try
+            {
+                var timeslot = await _dbContext.timeslots.Where(o => !_dbContext.BookingSlots.Include(c => c.BookingMaster).Where(w => w.BookingMaster.BookingDate.Date == DateTime.Today.Date).Select(b => b.TimeslotId).Contains(o.Id)).ToListAsync();
+                if (timeslot == null)
+                {
+                    return NotFound(new { Status = "Error", Result = "Timeslot not found" });
+                }
+
+                return Ok(new { Status = "OK", Result = timeslot });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Status = "Error", Message = ex.Message });
+            }
+        }
+
+        [HttpGet("AvailableSlotes")]
+        public async Task<IActionResult> AvailableSlotes([FromQuery] DateTime slotDate)
+        {
+            try
+            {
+                var timeslot = await _dbContext.timeslots.Where(o => !_dbContext.BookingSlots.Include(c => c.BookingMaster).Where(w => w.BookingMaster.BookingDate.Date == slotDate.Date).Select(b => b.TimeslotId).Contains(o.Id)).ToListAsync();
+                if (timeslot == null)
+                {
+                    return NotFound(new { Status = "Error", Result = "Timeslot not found" });
+                }
+
+                return Ok(new { Status = "OK", Result = timeslot });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Status = "Error", Message = ex.Message });
+            }
+        }
     }
 }

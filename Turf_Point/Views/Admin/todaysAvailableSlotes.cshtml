@@ -1,0 +1,71 @@
+﻿@{
+    ViewData["Title"] = "Todays Available Slots";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+
+<div class="container-fluid">
+
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4 class="fw-bold mb-0">Today's Available Slots</h4>
+    </div>
+
+   <div class="row">
+       <div class="col-md-12 mb-2">
+            <div class="table-responsive">
+                <table id="slotsTable" class="table table-bordered table-hover align-middle w-100">
+                    <thead>
+                        <tr>
+                            <th style="width:60px;">#</th>
+                            <th>Slot Time</th>
+                            <th>Type</th>
+                            <th class="text-end">Rate (₹)</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+       </div>
+   </div>
+
+</div>
+
+<script>
+    $(document).ready(function () {
+        $('#slotsTable').DataTable({
+            ajax: {
+                url: '@Url.Content("~/api/TimeSlot/AvailableSlotes/Todays")',
+                type: 'GET',
+                dataSrc: function (json) {
+                    return json.status === "OK" ? json.result : [];
+                }
+            },
+            columns: [
+                {
+                    data: null,
+                    render: function (data, type, row, meta) {
+                        return meta.row + 1;
+                    }
+                },
+                { data: 'timename' },
+                { data: 'type' },
+                {
+                    data: 'rate',
+                    className: 'text-end',
+                    render: function (data) {
+                        return '₹ ' + data;
+                    }
+                }
+            ],
+            paging: true,
+            searching: true,
+            ordering: true,
+            responsive: true,
+            lengthChange: false,
+            pageLength: 10,
+            language: {
+                emptyTable: "No slots available today"
+            }
+        });
+    });
+</script>

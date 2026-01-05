@@ -106,7 +106,7 @@ namespace Turf_Point.Controllers.API
 
         [HttpPost]
         [Route("ChangePassword")]
-        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordModel model)
+        public async Task<IActionResult> ChangePassword(ChangePasswordModel model)
         {
             try
             {
