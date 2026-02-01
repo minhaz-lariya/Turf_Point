@@ -165,8 +165,8 @@
                             timer: 1500,
                             showConfirmButton: false
                         }).then(() => {
-                            localStorage.setItem('adminUserName', res.results.username);
-                            localStorage.setItem('adminId', res.results.adminId);
+                            localStorage.setItem('adminUserName', res.result.username);
+                            localStorage.setItem('adminId', res.result.adminId);
                             window.location.href = '@Url.Content("~/Admin/Dashboard")';
                         });
                     } else {
